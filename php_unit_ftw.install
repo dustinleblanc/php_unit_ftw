@@ -1,0 +1,30 @@
+<?php
+/**
+ * @file
+ * php_unit_ftw.install file.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function php_unit_ftw_schema() {
+  $schema = array();
+
+  $schema[] = array();
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function php_unit_ftw_install() {
+
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function php_unit_ftw_uninstall() {
+  // variable_del('some variable');
+}
