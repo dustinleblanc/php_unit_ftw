@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>PHP Unit FTW</title>
+
+		<meta name="description" content="Using PHP Unit to test your Drupal 7 Modules">
+		<meta name="author" content="Dustin LeBlanc">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/solarized.css" id="theme">
+
+		<!-- Code syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h2>Unit Testing Custom Modules with PHP Unit</h2>
+					<p class="fragment">
+						It's not as hard as you think!
+					</p>
+				</section>
+
+				<section>
+					<h2>The Guy up front:</h2>
+				</section>
+
+				<section>
+					<h2>Dustin LeBlanc</h2>
+					<h4 class="fragment">Senior Developer / CMS Team Leader</h4>
+					<h3 class="fragment"><a href="http://singlebrook.com">Singlebrook Technology</a></h3>
+					<p class="fragment">
+						<a href="http://github.com/dustinleblanc">dustinleblanc on Github</a>
+					</p>
+					<p class="fragment">
+						<a href="https://www.drupal.org/u/dustin-leblanc">dustin-leblanc on Drupal.org</a>
+					</p>
+				</section>
+
+				<section>
+					<h2>Why Unit Test?</h2>
+					<p class="fragment">
+						Guards against future code causing regressions
+					</p>
+					<p class="fragment">
+						Provides self-documentation
+					</p>
+					<p class="fragment">
+						Provides quality assurance for future collaborators
+					</p>
+					<p class="fragment">
+						Reduces bugs
+					</p>
+					<p class="fragment">
+						Provides stability when expanding and creating new features
+					</p>
+					<p class="fragment">
+						Besides...
+					</p>
+				</section>
+
+				<section>
+					<img src="https://bluebeamuncovered.files.wordpress.com/2014/09/career-fair-meme.jpg" alt="" />
+				</section>
+
+				<section>
+					<h2>But...</h2>
+					<h3 class="fragment">Is my project a good candidate?</h3>
+				</section>
+
+				<section>
+					<section>
+						<p class="fragment">
+							How much code?
+						</p>
+					</section>
+
+					<section>
+						<pre class="stretch"><code data-trim>
+/**
+ * Implements hook_block_info().
+ */
+function hello_world_block_info() {
+  $blocks = array();
+
+  $blocks['hello_world'] = array(
+    'info' => t('Hello world'),
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function hello_world_block_view($delta = '') {
+  $block = array();
+
+  if ($delta == 'hello_world') {
+    $block['subject'] = t('Hello world');
+    $block['content'] = t('This is the block content.');
+  }
+
+  return $block;
+}
+						</code></pre>
+						<p class="fragment">
+							Not so much but...
+						</p>
+					</section>
+					<section>
+						<pre class="stretch">
+							<code data-trim>
+/**
+ * Provides abililty to wrap the content of HTML messages in multiple langauges.
+ */
+class MailWrap {
+  /**
+   * Wraps HTML content to a specific line width for sending html emails via smtp.
+   * @param string  $content HTML content of email body.
+   * @param integer $width   Line length to enforce wrapping
+   * @param object  $lang    Language of email.
+   */
+  public function wrapHtmlContent($content, $width = 75, $lang) {
+   $cut = false;
+   if (isset($lang) && ($lang == 'ja' || $lang == 'zh-hans')) {
+     $cut = true;
+   }
+   $html_obj = new simple_html_dom();
+   $html_obj->load($content);
+   foreach ($html_obj->find('text') as $element ) {
+     $element->innertext = $this->mbWordwrap($element->innertext, $width, "\n", $cut);
+    }
+    return $html_obj->save();
+  }
+
+  /**
+  * Wraps any string to a given number of characters.
+  *
+  * This implementation is multi-byte aware and relies on {@link
+  * http://www.php.net/manual/en/book.mbstring.php PHP's multibyte
+  * string extension}.
+  *
+  * @see wordwrap()
+  * @link https://api.drupal.org/api/drupal/core%21vendor%21zendframework%21zend-stdlib%21Zend%21Stdlib%21StringWrapper%21AbstractStringWrapper.php/function/AbstractStringWrapper%3A%3AwordWrap/8
+  * @param string $string
+  *   The input string.
+  * @param int $width [optional]
+  *   The number of characters at which <var>$string</var> will be
+  *   wrapped. Defaults to <code>75</code>.
+  * @param string $break [optional]
+  *   The line is broken using the optional break parameter. Defaults
+  *   to <code>"\n"</code>.
+  * @param boolean $cut [optional]
+  *   If the <var>$cut</var> is set to <code>TRUE</code>, the string is
+  *   always wrapped at or before the specified <var>$width</var>. So if
+  *   you have a word that is larger than the given <var>$width</var>, it
+  *   is broken apart. Defaults to <code>FALSE</code>.
+  * @return string
+  *   Returns the given <var>$string</var> wrapped at the specified
+  *   <var>$width</var>.
+  */
+  private function mbWordwrap($string, $width = 75, $break = "\n", $cut = false) {
+    $string = (string) $string;
+    if ($string === '') {
+      return '';
+    }
+
+    $break = (string) $break;
+    if ($break === '') {
+      trigger_error('Break string cannot be empty', E_USER_ERROR);
+    }
+
+    $width = (int) $width;
+    if ($width === 0 && $cut) {
+      trigger_error('Cannot force cut when width is zero', E_USER_ERROR);
+    }
+
+    if (strlen($string) === mb_strlen($string)) {
+      return wordwrap($string, $width, $break, $cut);
+    }
+
+    $stringWidth = mb_strlen($string);
+    $breakWidth = mb_strlen($break);
+
+    $result = '';
+    $lastStart = $lastSpace = 0;
+
+    for ($current = 0; $current < $stringWidth; $current++) {
+      $char = mb_substr($string, $current, 1);
+
+      $possibleBreak = $char;
+      if ($breakWidth !== 1) {
+        $possibleBreak = mb_substr($string, $current, $breakWidth);
+      }
+
+      if ($possibleBreak === $break) {
+        $result .= mb_substr($string, $lastStart, $current - $lastStart + $breakWidth);
+        $current += $breakWidth - 1;
+        $lastStart = $lastSpace = $current + 1;
+        continue;
+      }
+
+      if ($char === ' ') {
+        if ($current - $lastStart >= $width) {
+          $result .= mb_substr($string, $lastStart, $current - $lastStart) . $break;
+          $lastStart = $current + 1;
+        }
+
+        $lastSpace = $current;
+        continue;
+      }
+
+      if ($current - $lastStart >= $width && $cut && $lastStart >= $lastSpace) {
+        $result .= mb_substr($string, $lastStart, $current - $lastStart) . $break;
+        $lastStart = $lastSpace = $current;
+        continue;
+      }
+
+      if ($current - $lastStart >= $width && $lastStart < $lastSpace) {
+        $result .= mb_substr($string, $lastStart, $lastSpace - $lastStart) . $break;
+        $lastStart = $lastSpace = $lastSpace + 1;
+        continue;
+      }
+    }
+
+    if ($lastStart !== $current) {
+      $result .= mb_substr($string, $lastStart, $current - $lastStart);
+    }
+
+    return $result;
+	}
+}
+
+							</code>
+						</pre>
+						<p class="fragment">
+							aww yiss...
+						</p>
+					</section>
+					<section>
+						<p>
+							Hooks and core functions?
+						</p>
+						<p class="fragment">
+							probably not...
+						</p>
+						<p class="fragment">
+							Data manipulation, business critical logic, lots of custom stuff?
+						</p>
+						<p class="fragment">
+							aww yiss...
+						</p>
+					</section>
+				</section>
+				<section>
+					<h2>But how?</h2>
+				</section>
+				<section>
+					<h2>What you'll need:</h2>
+						<p class="fragment">
+							<a href="http://getcomposer.org">Composer</a>
+						</p>
+						<p class="fragment">
+							With <a href="http://brew.sh">Homebrew</a>:
+						</p>
+						<pre class="fragment">
+							<code data-trim>
+$ brew tap homebrew/homebrew-php
+$ brew install composer
+							</code>
+						</pre>
+						<p class="fragment">
+							PHP 5 (I use 5.5 via homebrew)
+						</p>
+				</section>
+
+				<section>
+					<h2>Let's get started</h2>
+				</section>
+
+				<section>
+					<section>
+						<h2>Install our dependencies:</h2>
+						<pre>
+							<code>
+	$ composer init
+	# fill out the stuff for your project
+							</code>
+						</pre>
+						<p class="fragment">
+							Make sure to set phpunit as a dev-dependency
+							<pre class="fragment">
+								<code data-trim>
+Would you like to define your dev dependencies interactively?
+Search for a package []: phpunit/phpunit
+Enter the version constraint to require (or leave blank to use the latest version) []:
+Using version ~4.6 for phpunit/phpunit
+								</code>
+							</pre>
+						</p>
+					</section>
+					<section>
+						<p>
+							Your resulting composer.json should be something like this:
+							<pre>
+								<code data-trim>
+{
+  "name": "dustin/module",
+  "description": "A cool module",
+  "require-dev": {
+    "phpunit/phpunit": "~4.6"
+  },
+  "authors": [
+    {
+      "name": "Dustin LeBlanc",
+      "email": "dustin@singlebrook.com"
+    }
+  ]
+}
+								</code>
+							</pre>
+						</p>
+					</section>
+				</section>
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+
+			// Full list of configuration options available at:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: true,
+				progress: true,
+				history: true,
+				center: true,
+
+				transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+				// Optional reveal.js plugins
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, condition: function() { return !!document.querySelector( 'pre code' ); }, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/notes/notes.js', async: true }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>

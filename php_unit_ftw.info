@@ -1,4 +1,0 @@
-name = php_unit_ftw
-description = Use PHPUnit Fool
-core = 7.x
-package = Other
