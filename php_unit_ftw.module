@@ -4,5 +4,12 @@
  * php_unit_ftw.module file.
  */
 
-
-
+/**
+ * Implements hook_view().
+ */
+function php_unit_ftw_node_view($node, $view_mode, $langcode) {
+  $pirator = new Pirator();
+  if ($pirator->shouldYe($node)) {
+    $node = $pirator->translate($node);
+  }
+}

@@ -3,7 +3,9 @@
   "description": "Example Module for Cornell Drupal Camp 2015 showcasing PHPUnit in Drupal module development",
   "require-dev": {
     "phpunit/phpunit": "~4.6",
-    "codegyre/robo": "*"
+  },
+  "autoload": {
+    "classmap": ["./", "../../../../includes/bootstrap.inc"]
   },
   "authors": [
     {
