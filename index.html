@@ -350,6 +350,272 @@ Using version ~4.6 for phpunit/phpunit
 					</section>
 				</section>
 
+				<section>
+					<h2>Configure PHP Unit</h2>
+					<p class="fragment">
+						<pre>
+							<code>
+<?xml version="1.0" encoding="utf-8" ?>
+<phpunit colors="true" bootstrap="./vendor/autoload.php">
+  <testsuites>
+    <testsuite name="My Test Suite">
+      <directory>./</directory>
+    </testsuite>
+  </testsuites>
+  <filter>
+    <blacklist>
+      <directory>./vendor</directory>
+    </blacklist>
+  </filter>
+</phpunit>
+							</code>
+						</pre>
+					</p>
+					<p class="fragment">
+						Your config might be different.
+					</p>
+				</section>
+				<section>
+					<section>
+						<h2>Writing Testable Code</h2>
+					</section>
+					<section>
+						<h2>Write single use functions</h2>
+						<pre>
+							<code data-trim>
+/**
+ * Implements hook_node_view()
+ */
+function example_node_view($node, $view_mode, $langcode) {
+  // Should I pirate?
+  if (!$node->nid % 2 == 0) {
+    return;
+  }
+  // Get page text
+  $wrapper = entity_metadata_wrapper('node', $node);
+  $text = $wrapper->body->value();
+  // Call to the pirate API
+  $r = new HttpRequest('http://isithackday.com/arrpi.php', HttpRequest::METH_GET);
+  $r->addQueryData(array('text' => $text));
+  try {
+    $r->send();
+    if ($r->getResponseCode() == 200) {
+      $pirate_text = $r->getResponseBody());
+    }
+  } catch (HttpException $ex) {
+    drupal_set_message($ex);
+  }
+  // Replace node text
+  $wrapper->body->set($pirate_text);
+  // Return the node
+  $node = $wrapper->value();
+}
+							</code>
+						</pre>
+						<p class="fragment">
+							Does all the things!
+						</p>
+					</section>
+					<section>
+						<h2>Hooks are just the entry point</h2>
+						<pre>
+							<code data-trim>
+/**
+ * Implements hook_view().
+ */
+function example_node_view($node, $view_mode, $langcode) {
+  $pirator = new Pirator();
+  if ($pirator->shouldYe($node)) {
+    $node = $pirator->translate($node);
+  }
+}
+							</code>
+						</pre>
+						<p class="fragment">
+							Only concerned with evaluating condition and executing
+						</p>
+					</section>
+					<section>
+						<p>
+							Our rewritten module code...
+						</p>
+						<pre>
+							<code data-trim>
+class Pirator {
+  /**
+   * Determines whether a node should be pirated.
+   * How bout every other node?
+   * @return BOOL
+   */
+  public function shouldYe(stdClass $node) {
+    if ($node->nid % 2 == 0) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
+  public function translate(stdClass $node) {
+    $wrapper = entity_metadata_wrapper('node', $node);
+    $text = $this->getBody($wrapper);
+    $translation = $this->getTranslation($text);
+    $this->setContent($node, $translation);
+    dpm($wrapper->value());
+    return $wrapper->value();
+  }
+
+  /**
+   * Call to the arrpi and get a translation
+   *
+   * @param string the text to translate
+   */
+  protected function getTranslation($text) {
+    $data = array(
+      'text' => $text,
+    );
+    $url = url('http://isithackday.com/arrpi.php', array('query' => $data));
+    $r = drupal_http_request($url);
+
+    if ($r->code == 200) {
+      return $r->data;
+    }
+    else {
+      drupal_set_message(t($r->error), 'error');
+    }
+  }
+
+  /**
+   * Get page text
+   *
+   * @param EntityValueWrapper $wrapper wrapped node
+   *
+   * @return string the node body text
+   */
+  protected function getBody(EntityDrupalWrapper $wrapper) {
+    return $wrapper->body->value->value();
+  }
+
+  /**
+   * Set translated
+   *
+   * @param EntityValueWrapper $wrapper wrapped node
+   * @param string $translation [description]
+   */
+  protected function setContent(stdClass $node, $translation) {
+    return $node->content['body'][0]['#markup'] = $translation;
+  }
+}
+							</code>
+						</pre>
+						<p class="fragment">
+							Each method does one job
+						</p>
+						<p class="fragment">
+							OO setup is easier to load with php unit
+						</p>
+
+					</section>
+					<section>
+						<h2>Better, not perfect</h2>
+						<p class="fragment">
+							Loading and calling Drupal functions is still painful
+						</p>
+						<p class="fragment">
+							Not all of your methods will be easy to test
+						</p>
+					</section>
+				</section>
+				<section>
+					<section>
+						<h2>Writing Tests</h2>
+					</section>
+					<section>
+						<h2>Config changes</h2>
+						<p>
+							In composer.json we have to make a slight tweak:
+						</p>
+						<pre>
+							<code data-trim>
+{
+  "name": "dustin/module",
+  "description": "Example Module for Cornell Drupal Camp 2015 showcasing PHPUnit in Drupal module development",
+  "require-dev": {
+    "phpunit/phpunit": "~4.6",
+  },
+  "autoload": {
+    "classmap": ["./", "../../../../includes/bootstrap.inc"]
+  },
+  "authors": [
+    {
+      "name": "Dustin LeBlanc",
+      "email": "dustin@singlebrook.com"
+    }
+  ]
+}
+							</code>
+						</pre>
+						<p class="fragment">
+							Note the addition of 'autoload'
+						</p>
+					</section>
+					<section>
+						<h2>Sample Test</h2>
+						<pre>
+							<code data-trim>
+/**
+ * Provides testing for Pirator class.
+ */
+class PiratorTest extends PHPUnit_Framework_TestCase {
+  protected $pirator;
+  protected $node;
+
+  /**
+   * Pre-test setup
+   */
+  protected function setUp() {
+    $this->pirator = new Pirator();
+  }
+
+  public function testShouldYe() {
+    $node = new stdClass();
+    $node->nid = 2;
+    $this->assertTrue($this->pirator->shouldYe($node));
+  }
+}
+						</code>
+						</pre>
+					</section>
+					<section>
+						<h2>Running tests</h2>
+						<pre>
+							<code>$ ./vendor/bin/phpunit</code>
+						</pre>
+						<p class="fragment">
+							<h3>boom</h3>
+							<pre>
+								<code>
+PHPUnit 4.6.4 by Sebastian Bergmann and contributors.
+
+Configuration read from ...your config file...
+
+.
+
+Time: 251 ms, Memory: 16.00Mb
+
+OK (1 test, 1 assertion)
+								</code>
+							</pre>
+						</p>
+					</section>
+				</section>
+				<section>
+					<h2>Resources</h2>
+					<p>
+						<a href="https://www.previousnext.com.au/blog/drupal-8-now-phpunit-tests-drupal-7">Drupal 8 Now: PHPUnit tests in Drupal 7</a>
+					</p>
+					<p>
+						<a href="https://phpunit.de/">PHP Unit Docs</a>
+					</p>
+				</section>
 			</div>
 
 		</div>
