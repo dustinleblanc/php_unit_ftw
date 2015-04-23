@@ -358,8 +358,8 @@ Using version ~4.6 for phpunit/phpunit
 <?xml version="1.0" encoding="utf-8" ?>
 <phpunit colors="true" bootstrap="./vendor/autoload.php">
   <testsuites>
-    <testsuite name="My Test Suite">
-      <directory>./</directory>
+    <testsuite name="Mysite Tests">
+      <directory>path/to/sites/all/modules/custom/</directory>
     </testsuite>
   </testsuites>
   <filter>
@@ -510,7 +510,7 @@ class Pirator {
 							Each method does one job
 						</p>
 						<p class="fragment">
-							OO setup is easier to load with php unit
+							Object-oriented setup is easier to load with php unit
 						</p>
 
 					</section>
@@ -542,7 +542,7 @@ class Pirator {
     "phpunit/phpunit": "~4.6",
   },
   "autoload": {
-    "classmap": ["./", "../../../../includes/bootstrap.inc"]
+    "classmap": ["./path/to/custom/module/includes", "./includes/bootstrap.inc"]
   },
   "authors": [
     {
@@ -582,6 +582,24 @@ class PiratorTest extends PHPUnit_Framework_TestCase {
   }
 }
 						</code>
+						</pre>
+					</section>
+					<section>
+						<h2>Bootstrap Drupal</h2>
+						<p>
+							at the top of your test file...
+						</p>
+						<pre>
+							<code data-trim class="php">								
+/**
+ * Setup environoment to have access to Drupal functions and installed modules.
+ */
+define('DRUPAL_ROOT', getcwd());
+require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
+$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
+// Bootstrap Drupal.
+drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
+							</code>
 						</pre>
 					</section>
 					<section>
