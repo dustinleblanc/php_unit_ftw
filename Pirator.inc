@@ -18,7 +18,6 @@ class Pirator {
     $text = $this->getBody($wrapper);
     $translation = $this->getTranslation($text);
     $this->setContent($node, $translation);
-    dpm($wrapper->value());
     return $wrapper->value();
   }
 
@@ -38,7 +37,7 @@ class Pirator {
       return $r->data;
     }
     else {
-      drupal_set_message(t($r->error), 'error');
+      drupal_set_message(t($r->error), 'Avast me mateys! Something went wrong!');
     }
   }
 
